@@ -59,6 +59,16 @@ class BidSearcher:
     def get_products (self):
         return self.__products__
 
+class YahooSearcher(BidSearcher):
+    def __init__ (self, keyword, seller = None):
+        BidSearcher (keyword, seller)
+
+    def __get_all_links (self, url):
+        pass
+
+    def __get_products (self, url):
+        pass
+
 class RutenSearcher(BidSearcher):
     def __init__ (self, keyword, seller = None):
         BidSearcher (keyword, seller)
@@ -151,6 +161,7 @@ if __name__ == '__main__':
     second_keyword = sys.argv[2]
 
     searcher = RutenSearcher (first_keyword)
+    #searcher = Yahooearcher (first_keyword)
     first_products = searcher.get_products()
 
     all_sellers = []
