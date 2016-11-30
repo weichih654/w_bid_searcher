@@ -8,9 +8,10 @@ import sys
 import Queue, time, threading, datetime
 
 log = logging.getLogger ('bid')
+hdlr = logging.FileHandler ("/var/log/bid_dev.log")
 #hdlr = logging.StreamHandler ()
-log.setLevel (logging.DEBUG)
-#log.addHandler (hdlr)
+log.addHandler (hdlr)
+log.setLevel (logging.INFO)
 
 def get_content (url):
     hdr = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
@@ -110,6 +111,7 @@ class RutenSearcher(BidSearcher):
             _url = ("%s&p=%d" % (url, i))
             all_page_links [_url] = None
             queue.put (_url)
+        log.info ("Processing %d page links" % len (all_page_links))
         thd1 = threading.Thread(target=self.__doPageJob__, name='Thd1', args=(queue,all_page_links))
         thd2 = threading.Thread(target=self.__doPageJob__, name='Thd2', args=(queue,all_page_links))
         thd3 = threading.Thread(target=self.__doPageJob__, name='Thd3', args=(queue,all_page_links))
@@ -128,9 +130,11 @@ class RutenSearcher(BidSearcher):
                 if all_page_links [k] is None:
                     all_finish = False
                     break
-        log.debug ("Get all products done")
+            time.sleep (1)
+
         for p in all_page_links:
             products.extend (all_page_links[p])
+        log.info ("Get all products done, %d pruducts" % len (products))
 
         #for p in products:
         #    log.debug ("all product link = %s, seller = %s" % (p.link, p.seller))
@@ -225,10 +229,10 @@ def search_seller_by_all_keywords (searchers):
         return None
     s1 = RutenSearcher (searchers[0])
     s2 = RutenSearcher (searchers[1])
-    p1 = s1.get_products ()
-    p2 = s2.get_products ()
-    log.debug ("p1 have %d products" % len (p1))
-    log.debug ("p2 have %d products" % len (p2))
+    p1 = s1.get_sellers ()
+    p2 = s2.get_sellers ()
+    log.info ("keyword %s have %d sellers" % (searchers[0], len (p1)))
+    log.info ("keyword %s have %d sellers" % (searchers[1], len (p2)))
 
     hs1 = None
     hs2 = None
@@ -245,6 +249,8 @@ def search_seller_by_all_keywords (searchers):
 
     sellers = hs1.get_sellers ()
     sellers_count = len (sellers)
+
+    log.info ("get %d sellers in keyword %s" % (sellers_count, k1))
 
     all_products = {}
     for s in sellers:
@@ -295,5 +301,10 @@ if __name__ == '__main__':
     first_keyword = sys.argv[1]
     second_keyword = sys.argv[2]
 
-    search_seller_by_all_keywords ([first_keyword, second_keyword])
+    log.info ("start at %s" % datetime.datetime.now())
+    sellers = search_seller_by_all_keywords ([first_keyword, second_keyword])
+    for s in sellers:
+        log.info ("[%s]" % s)
+    log.info ("%d sellers" % len (sellers))
+    log.info ("end at %s" % datetime.datetime.now())
 
