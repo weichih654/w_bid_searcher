@@ -105,7 +105,11 @@ class RutenSearcher(BidSearcher):
         products = []
         all_page_links = {}
         queue = Queue.Queue ()
-        for i in range (0, self.max_page):
+        if self.seller is None:
+            page_count = self.max_page
+        else:
+            page_count = 1
+        for i in range (0, page_count):
             if self.seller is None:
                 i = i + 1
             _url = ("%s&p=%d" % (url, i))
