@@ -77,11 +77,19 @@ class YahooSearcher(BidSearcher):
     def __get_products (self, url):
         pass
 
+
 class RutenSearcher(BidSearcher):
+    def __doPageJob__ (self, *args):
+        log.debug ("doPageJob")
+        queue = args[0]
+        while queue.qsize() > 0:
+            job = queue.get()
+            args[1][job] = self.__get_products (job)
+
     def __init__ (self, keyword, seller = None):
         BidSearcher (keyword, seller)
         self.html = None
-        self.max_page = 5
+        self.max_page = 10
         self.seller = seller
         self.__sellers__ = []
 
@@ -94,17 +102,35 @@ class RutenSearcher(BidSearcher):
         url = main_url + keyword
         log.debug ("url = %s" % url)
         products = []
+        all_page_links = {}
+        queue = Queue.Queue ()
         for i in range (0, self.max_page):
             if self.seller is None:
                 i = i + 1
             _url = ("%s&p=%d" % (url, i))
-            _products = self.__get_products (_url)
-            if _products is None:
-                break;
-            products.extend (_products)
-            if self.seller is not None:
-                break;
-        #self.__get_all_links (url)
+            all_page_links [_url] = None
+            queue.put (_url)
+        thd1 = threading.Thread(target=self.__doPageJob__, name='Thd1', args=(queue,all_page_links))
+        thd2 = threading.Thread(target=self.__doPageJob__, name='Thd2', args=(queue,all_page_links))
+        thd3 = threading.Thread(target=self.__doPageJob__, name='Thd3', args=(queue,all_page_links))
+        thd4 = threading.Thread(target=self.__doPageJob__, name='Thd3', args=(queue,all_page_links))
+        thd5 = threading.Thread(target=self.__doPageJob__, name='Thd3', args=(queue,all_page_links))
+        thd1.start ()
+        thd2.start ()
+        thd3.start ()
+        thd4.start ()
+        thd5.start ()
+
+        all_finish = False
+        while all_finish is False:
+            all_finish = True
+            for k in all_page_links:
+                if all_page_links [k] is None:
+                    all_finish = False
+                    break
+        log.debug ("Get all products done")
+        for p in all_page_links:
+            products.extend (all_page_links[p])
 
         #for p in products:
         #    log.debug ("all product link = %s, seller = %s" % (p.link, p.seller))
@@ -181,16 +207,16 @@ def doJob(*args):
         job = queue.get()
         args[1][job.seller] = job.do()
 
-class Job:
+class Job_Search_By_Seller:
     def __init__ (self, seller, keyword):
         self.seller = seller
         self.keyword = keyword
 
     def do (self):
-        log.debug ("Job do")
+        log.debug ("Job_Search_By_Seller do")
         _s = RutenSearcher (self.keyword, self.seller)
         _p = _s.get_products ()
-        log.debug ("Job done, seller = %s, keyword = %s, products count = %d" % (self.seller, self.keyword, len (_p)))
+        log.debug ("Job_Search_By_Seller done, seller = %s, keyword = %s, products count = %d" % (self.seller, self.keyword, len (_p)))
         return _p
 
 def search_seller_by_all_keywords (searchers):
@@ -226,7 +252,7 @@ def search_seller_by_all_keywords (searchers):
 
     que = Queue.Queue()
     for s in sellers:
-        que.put(Job(s, k2))
+        que.put(Job_Search_By_Seller(s, k2))
 
     log.debug ("create Thd1")
     thd1 = threading.Thread(target=doJob, name='Thd1', args=(que,all_products))
